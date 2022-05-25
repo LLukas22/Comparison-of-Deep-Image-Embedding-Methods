@@ -1,25 +1,35 @@
-from torch import nn
-
+import torch
+import pytorch_lightning as pl
+from modules.losses import ContrastiveLoss
 #see https://towardsdatascience.com/a-friendly-introduction-to-siamese-networks-85ab17522942
 
-class SiameseNetwork(nn.Module):
+class SiameseNetwork(pl.LightningModule):
     """
     Wrapps a embedding model into a siamese network
     """
-    def __init__(self,model:nn.Module) -> None:
+    def __init__(self,model:torch.nn.Module) -> None:
         super(SiameseNetwork, self).__init__()
         self.model = model
+        self.criterion = ContrastiveLoss()
         
-    def single_forward(self,x):
-        """
-        the normal forward function of the embedding model
-        """
+    def forward(self, x):
         return self.model(x)
     
-    def forward(self, x1, x2):
-        """
-        the forward function of the siamese network
-        """
-        y1 = self.single_forward(x1)
-        y2 = self.single_forward(x2)
-        return y1, y2
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1)
+        return [optimizer], [lr_scheduler]
+    
+    def training_step(self, batch, batch_idx):
+        x1,x2,y = batch
+        y_hat1 = self(x1)
+        y_hat2 = self(x2)
+        loss = self.criterion(y_hat1,y_hat2, y)
+        return loss
+    
+    def validation_step(self, batch, batch_idx):
+        x1,x2,y = batch
+        y_hat1 = self(x1)
+        y_hat2 = self(x2)
+        val_loss = self.criterion(y_hat1,y_hat2, y)
+        self.log("val_loss", val_loss)

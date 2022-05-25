@@ -1,28 +1,68 @@
 import torch
 from torch import nn
+from torch.nn import functional as F
 
-class ContrastiveLoss(nn.Module):
+class ContrastiveLoss(torch.nn.Module):
     """
     Contrastive loss function.
-    Based on: https://towardsdatascience.com/a-friendly-introduction-to-siamese-networks-85ab17522942
+    Based on: http://yann.lecun.com/exdb/publis/pdf/hadsell-chopra-lecun-06.pdf
     """
 
-    def __init__(self, margin=1.0):
+    def __init__(self, margin=2.0):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
 
-    def forward(self, x0, x1, y):
-        # euclidian distance
-        diff = x0 - x1
-        dist_sq = torch.sum(torch.pow(diff, 2), 1)
-        dist = torch.sqrt(dist_sq)
+    def forward(self, x1,x2, label):
+        
+        dist = (x1 - x2).pow(2).sum(1)
+        loss = torch.mean(1/2*(label) * torch.pow(dist, 2) +
+                                      1/2*(1-label) * torch.pow(torch.clamp(self.margin - dist, min=0.0), 2))
 
-        mdist = self.margin - dist
-        dist = torch.clamp(mdist, min=0.0)
-        loss = y * dist_sq + (1 - y) * torch.pow(dist, 2)
-        loss = torch.sum(loss) / 2.0 / x0.size()[0]
+
         return loss
     
+    
+class TripletLoss(torch.nn.Module):
+    """
+    Triplet loss function.
+    """
+
+    def __init__(self, margin=2.0):
+        super(TripletLoss, self).__init__()
+        self.margin = margin
+
+    def forward(self, anchor, positive, negative):
+
+        squarred_distance_1 = (anchor - positive).pow(2).sum(1)
+        
+        squarred_distance_2 = (anchor - negative).pow(2).sum(1)
+        
+        triplet_loss = F.relu( self.margin + squarred_distance_1 - squarred_distance_2 ).mean()
+        
+        return triplet_loss
+    
+    
+class QuadrupletLoss(torch.nn.Module):
+    """
+    Quadruplet loss function.
+    Builds on the Triplet Loss and takes 4 data input: one anchor, one positive and two negative examples. The negative examples needs not to be matching the anchor, the positive and each other.
+    """
+    def __init__(self, margin1=2.0, margin2=1.0):
+        super(QuadrupletLoss, self).__init__()
+        self.margin1 = margin1
+        self.margin2 = margin2
+
+    def forward(self, anchor, positive, negative1, negative2):
+
+        squarred_distance_pos = (anchor - positive).pow(2).sum(1)
+        squarred_distance_neg = (anchor - negative1).pow(2).sum(1)
+        squarred_distance_neg_b = (negative1 - negative2).pow(2).sum(1)
+
+        quadruplet_loss = \
+            F.relu(self.margin1 + squarred_distance_pos - squarred_distance_neg) \
+            + F.relu(self.margin2 + squarred_distance_pos - squarred_distance_neg_b)
+
+        return quadruplet_loss.mean()
     
 # from https://github.com/HobbitLong/SupContrast
 class SupConLoss(nn.Module):
@@ -47,10 +87,7 @@ class SupConLoss(nn.Module):
         Returns:
             A loss scalar.
         """
-        device = (torch.device('cuda')
-                  if features.is_cuda
-                  else torch.device('cpu'))
-
+        
         if len(features.shape) < 3:
             raise ValueError('`features` needs to be [bsz, n_views, ...],'
                              'at least 3 dimensions are required')
@@ -61,14 +98,14 @@ class SupConLoss(nn.Module):
         if labels is not None and mask is not None:
             raise ValueError('Cannot define both `labels` and `mask`')
         elif labels is None and mask is None:
-            mask = torch.eye(batch_size, dtype=torch.float32).to(device)
+            mask = torch.eye(batch_size, dtype=torch.float32)
         elif labels is not None:
             labels = labels.contiguous().view(-1, 1)
             if labels.shape[0] != batch_size:
                 raise ValueError('Num of labels does not match num of features')
-            mask = torch.eq(labels, labels.T).float().to(device)
+            mask = torch.eq(labels, labels.T).float()
         else:
-            mask = mask.float().to(device)
+            mask = mask.float()
 
         contrast_count = features.shape[1]
         contrast_feature = torch.cat(torch.unbind(features, dim=1), dim=0)
@@ -95,7 +132,7 @@ class SupConLoss(nn.Module):
         logits_mask = torch.scatter(
             torch.ones_like(mask),
             1,
-            torch.arange(batch_size * anchor_count).view(-1, 1).to(device),
+            torch.arange(batch_size * anchor_count).view(-1, 1),
             0
         )
         mask = mask * logits_mask
