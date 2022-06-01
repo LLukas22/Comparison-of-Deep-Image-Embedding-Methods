@@ -1,6 +1,8 @@
 /Carparts
+/tiny-imagenet-200
 /lightning_logs
 /cache
+/runs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -20,7 +20,8 @@ def _get_image_directories(root_dir):
     """
     Returns a list of directories with images in the root directory
     """
-    return [dir for dir in _fast_scandir(root_dir) if os.walk(dir).__next__()[2]]
+    possible_dirs =  [dir for dir in _fast_scandir(root_dir) if os.walk(dir).__next__()[2]]
+    return [possible_dir for  possible_dir in possible_dirs if len(_fast_scandir(possible_dir))==0]
 
 def _chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
@@ -35,7 +36,7 @@ class IndexRange(object):
     def inRange(self,index:int) -> bool:
         return index >= self.start and index < self.stop
          
-     
+         
 class CachingDataset(Dataset):
     def __init__(self,dataset:Dataset,cache_in_ram:bool = False,cache_path:str = None) -> None:
         self.dataset = dataset
@@ -95,40 +96,60 @@ class MultiLabelDataset(Dataset):
                  cache_path:str = None,
                  cache_in_ram:bool=False,
                  random_seed:int = 42,
-                 max_size_per_class:int = None) -> None:
+                 max_size_per_class:int = None,
+                 max_classes:int=None,
+                 label_index:int=0) -> None:
         
         self.dir = dir
         self.labels = {}
         self.files = []
         self.datasets={}
         self.ranges:dict[IndexRange,str]={}
+        self.reversed_ranges:dict[str,IndexRange]={}
+        self.random_provider = random.Random(random_seed)
         
-        directories = _get_image_directories(self.dir)
+        found_directories = _get_image_directories(self.dir)
+        directories = []
+        #reduce the classes if needed
+        if max_classes and len(found_directories)>max_classes:
+            for i in range(max_classes):
+                directories.append(found_directories.pop(self.random_provider.randrange(0, len(found_directories))))
+        else:
+            directories = found_directories        
+               
         for directory in directories:
-            label = os.path.basename(directory)
+            relative_path = os.path.relpath(directory,self.dir)
+            label = os.path.split(relative_path)[label_index]
             start_index = len(self.files)
             self.labels[label] = len(self.labels)
             dataset = ImageDataset(directory,transform,label=self.labels[label],random_seed=random_seed,max_size=max_size_per_class)
+            if len(dataset) == 0:
+                continue
             self.files += dataset.files
             
             dataset = CachingDataset(dataset,cache_in_ram,os.path.join(cache_path,label) if cache_path else None)
             self.datasets[label] = dataset
-            self.ranges[IndexRange(start_index,len(self.files))] = label            
+            self.ranges[IndexRange(start_index,len(self.files))] = label   
+        
+        self.reversed_ranges =  dict((reversed(item) for item in self.ranges.items()))  
 
     def __len__(self):
         return len(self.files)
 
+    def getSubDataset(self,idx:int)->str:
+         for range in self.ranges:
+            if range.inRange(idx):
+                return self.ranges[range]
+             
     def __getitem__(self, idx):
         for range in self.ranges:
             if range.inRange(idx):
                 return self.datasets[self.ranges[range]][idx - range.start]
             
-def get_random(lst,random_provider:random.Random):
-    idx = random_provider.randrange(0, len(lst))
-    return lst.pop(idx)
+
 
 class ContrastiveDataset(Dataset):
-    def __init__(self,multiLabelDataset:MultiLabelDataset,random_seed:int = 42) -> None:
+    def __init__(self,multiLabelDataset:MultiLabelDataset,positives:int = 1,negatives:int = None,random_seed:int = 42) -> None:
         
         self.multiLabelDataset = multiLabelDataset
         self.random_provider = random.Random(random_seed)
@@ -136,14 +157,39 @@ class ContrastiveDataset(Dataset):
         while len(self.possible_indices)%2 == 1:
             self.possible_indices.remove(self.possible_indices[self.random_provider.randrange(0, len(self.possible_indices))])
 
-            
+
         self.image_pairs = []
         
-        for index in self.possible_indices:
-            other_index = get_random(self.possible_indices,self.random_provider)
-            while other_index == index:
-                other_index = get_random(self.possible_indices,self.random_provider)
-            self.image_pairs.append((index,other_index))
+        dataset_keys = list(self.multiLabelDataset.datasets.keys())
+        for index in tqdm(self.possible_indices,"Building Contrastive Pairs"):
+            
+            sub_dataset =  self.multiLabelDataset.getSubDataset(index)
+            #chose random images from the same class
+            for i in range(positives):
+                positive_range = self.multiLabelDataset.reversed_ranges[sub_dataset]
+                other_positive_index = index 
+                while other_positive_index == index:
+                    other_positive_index = self.random_provider.randrange(positive_range.start, positive_range.stop)
+                self.image_pairs.append((index,other_positive_index))
+              
+            if negatives == None:
+                 for key in self.multiLabelDataset.datasets:
+                    if key == sub_dataset:
+                        continue
+                    negative_range = self.multiLabelDataset.reversed_ranges[key]
+                    negative_index = self.random_provider.randrange(negative_range.start, negative_range.stop)
+                    self.image_pairs.append((index,negative_index))
+            else:         
+                for i in range(negatives):
+                    other_dataset = sub_dataset
+                    while other_dataset == sub_dataset:
+                        other_dataset = self.random_provider.choice(dataset_keys)
+                    
+                    negative_range = self.multiLabelDataset.reversed_ranges[other_dataset]
+                    negative_index = self.random_provider.randrange(negative_range.start, negative_range.stop)
+                    self.image_pairs.append((index,negative_index))
+                
+
             
     def __len__(self):
         return len(self.image_pairs)

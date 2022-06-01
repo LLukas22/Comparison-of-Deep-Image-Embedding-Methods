@@ -1,151 +1,79 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
+from pytorch_metric_learning import losses
 
-class ContrastiveLoss(torch.nn.Module):
+class  SupervisedLoss(torch.nn.Module):
+    def __init__(self) -> None:
+        super(SupervisedLoss, self).__init__()
+        self.loss = None
+        
+    def forward(self, embeddings, labels):
+        return self.loss(embeddings, labels)
+        
+class UnsupervisedLoss(torch.nn.Module):
+    def __init__(self) -> None:
+        super(UnsupervisedLoss, self).__init__()
+ 
+        
+class ContrastiveLoss(SupervisedLoss):
     """
     Contrastive loss function.
     Based on: http://yann.lecun.com/exdb/publis/pdf/hadsell-chopra-lecun-06.pdf
     """
 
-    def __init__(self, margin=2.0):
+    def __init__(self,pos_margin=0.0, neg_margin=1.0):
         super(ContrastiveLoss, self).__init__()
-        self.margin = margin
+        self.loss = losses.ContrastiveLoss(pos_margin=pos_margin,neg_margin=neg_margin)
 
-    def forward(self, x1,x2, label):
-        
-        dist = (x1 - x2).pow(2).sum(1)
-        loss = torch.mean(1/2*(label) * torch.pow(dist, 2) +
-                                      1/2*(1-label) * torch.pow(torch.clamp(self.margin - dist, min=0.0), 2))
-
-
-        return loss
-    
-    
-class TripletLoss(torch.nn.Module):
+     
+class TripletLoss(SupervisedLoss):
     """
     Triplet loss function.
     """
-
-    def __init__(self, margin=2.0):
+    def __init__(self, margin=0.05,
+                        swap=False,
+                        smooth_loss=False,
+                        triplets_per_anchor="all"):
         super(TripletLoss, self).__init__()
-        self.margin = margin
+        self.loss = losses.TripletMarginLoss(margin=margin,
+                                                swap=swap,
+                                                smooth_loss=smooth_loss,
+                                                triplets_per_anchor=triplets_per_anchor)
 
-    def forward(self, anchor, positive, negative):
-
-        squarred_distance_1 = (anchor - positive).pow(2).sum(1)
-        
-        squarred_distance_2 = (anchor - negative).pow(2).sum(1)
-        
-        triplet_loss = F.relu( self.margin + squarred_distance_1 - squarred_distance_2 ).mean()
-        
-        return triplet_loss
-    
-    
-class QuadrupletLoss(torch.nn.Module):
+class  SupConLoss(SupervisedLoss):
     """
-    Quadruplet loss function.
-    Builds on the Triplet Loss and takes 4 data input: one anchor, one positive and two negative examples. The negative examples needs not to be matching the anchor, the positive and each other.
+        Supervised Contrastive Learning: https://arxiv.org/pdf/2004.11362.pdf.
     """
-    def __init__(self, margin1=2.0, margin2=1.0):
-        super(QuadrupletLoss, self).__init__()
-        self.margin1 = margin1
-        self.margin2 = margin2
-
-    def forward(self, anchor, positive, negative1, negative2):
-
-        squarred_distance_pos = (anchor - positive).pow(2).sum(1)
-        squarred_distance_neg = (anchor - negative1).pow(2).sum(1)
-        squarred_distance_neg_b = (negative1 - negative2).pow(2).sum(1)
-
-        quadruplet_loss = \
-            F.relu(self.margin1 + squarred_distance_pos - squarred_distance_neg) \
-            + F.relu(self.margin2 + squarred_distance_pos - squarred_distance_neg_b)
-
-        return quadruplet_loss.mean()
-    
-# from https://github.com/HobbitLong/SupContrast
-class SupConLoss(nn.Module):
-    """Supervised Contrastive Learning: https://arxiv.org/pdf/2004.11362.pdf.
-    It also supports the unsupervised contrastive loss in SimCLR"""
-    def __init__(self, temperature=0.07, contrast_mode='all',
-                 base_temperature=0.07):
+    def __init__(self,temperature=0.1) -> None:
         super(SupConLoss, self).__init__()
-        self.temperature = temperature
-        self.contrast_mode = contrast_mode
-        self.base_temperature = base_temperature
+        self.loss = losses.SupConLoss(temperature=temperature)
 
-    def forward(self, features, labels=None, mask=None):
-        """Compute loss for model. If both `labels` and `mask` are None,
-        it degenerates to SimCLR unsupervised loss:
-        https://arxiv.org/pdf/2002.05709.pdf
-        Args:
-            features: hidden vector of shape [bsz, n_views, ...].
-            labels: ground truth of shape [bsz].
-            mask: contrastive mask of shape [bsz, bsz], mask_{i,j}=1 if sample j
-                has the same class as sample i. Can be asymmetric.
-        Returns:
-            A loss scalar.
-        """
+    def forward(self,features,labels):
+        return self.loss(features, labels)
+    
+    
+class SNRLoss(SupervisedLoss):
+    """
+    SignalToNoiseRatioContrastiveLoss see: http://openaccess.thecvf.com/content_CVPR_2019/papers/Yuan_Signal-To-Noise_Ratio_A_Robust_Distance_Metric_for_Deep_Metric_Learning_CVPR_2019_paper.pdf
+    """
+    def __init__(self,pos_margin=0, neg_margin=1) -> None:
+        super(SNRLoss, self).__init__()
+        self.loss = losses.SignalToNoiseRatioContrastiveLoss(pos_margin=pos_margin,neg_margin=neg_margin)
         
-        if len(features.shape) < 3:
-            raise ValueError('`features` needs to be [bsz, n_views, ...],'
-                             'at least 3 dimensions are required')
-        if len(features.shape) > 3:
-            features = features.view(features.shape[0], features.shape[1], -1)
+    
+class CentroidTripletLoss(SupervisedLoss):
+    """
+    CentroidTripletLoss see: https://arxiv.org/pdf/2104.13643.pdf
+    """
+    def __init__(self,margin=0.05,
+                            swap=False,
+                            smooth_loss=False,
+                            triplets_per_anchor="all") -> None:
+        super(CentroidTripletLoss, self).__init__()
+        self.loss = losses.CentroidTripletLoss(margin=margin,
+                            swap=swap,
+                            smooth_loss=smooth_loss,
+                            triplets_per_anchor=triplets_per_anchor)
 
-        batch_size = features.shape[0]
-        if labels is not None and mask is not None:
-            raise ValueError('Cannot define both `labels` and `mask`')
-        elif labels is None and mask is None:
-            mask = torch.eye(batch_size, dtype=torch.float32)
-        elif labels is not None:
-            labels = labels.contiguous().view(-1, 1)
-            if labels.shape[0] != batch_size:
-                raise ValueError('Num of labels does not match num of features')
-            mask = torch.eq(labels, labels.T).float()
-        else:
-            mask = mask.float()
-
-        contrast_count = features.shape[1]
-        contrast_feature = torch.cat(torch.unbind(features, dim=1), dim=0)
-        if self.contrast_mode == 'one':
-            anchor_feature = features[:, 0]
-            anchor_count = 1
-        elif self.contrast_mode == 'all':
-            anchor_feature = contrast_feature
-            anchor_count = contrast_count
-        else:
-            raise ValueError('Unknown mode: {}'.format(self.contrast_mode))
-
-        # compute logits
-        anchor_dot_contrast = torch.div(
-            torch.matmul(anchor_feature, contrast_feature.T),
-            self.temperature)
-        # for numerical stability
-        logits_max, _ = torch.max(anchor_dot_contrast, dim=1, keepdim=True)
-        logits = anchor_dot_contrast - logits_max.detach()
-
-        # tile mask
-        mask = mask.repeat(anchor_count, contrast_count)
-        # mask-out self-contrast cases
-        logits_mask = torch.scatter(
-            torch.ones_like(mask),
-            1,
-            torch.arange(batch_size * anchor_count).view(-1, 1),
-            0
-        )
-        mask = mask * logits_mask
-
-        # compute log_prob
-        exp_logits = torch.exp(logits) * logits_mask
-        log_prob = logits - torch.log(exp_logits.sum(1, keepdim=True))
-
-        # compute mean of log-likelihood over positive
-        mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1)
-
-        # loss
-        loss = - (self.temperature / self.base_temperature) * mean_log_prob_pos
-        loss = loss.view(anchor_count, batch_size).mean()
-
-        return loss
+    
