@@ -61,19 +61,10 @@ class SNRLoss(SupervisedLoss):
         super(SNRLoss, self).__init__()
         self.loss = losses.SignalToNoiseRatioContrastiveLoss(pos_margin=pos_margin,neg_margin=neg_margin)
         
-    
-class CentroidTripletLoss(SupervisedLoss):
+class NTXentLoss(SupervisedLoss):
     """
-    CentroidTripletLoss see: https://arxiv.org/pdf/2104.13643.pdf
+    NTXentLoss see: https://arxiv.org/pdf/1807.03748.pdf or https://arxiv.org/pdf/2002.05709.pdf
     """
-    def __init__(self,margin=0.05,
-                            swap=False,
-                            smooth_loss=False,
-                            triplets_per_anchor="all") -> None:
-        super(CentroidTripletLoss, self).__init__()
-        self.loss = losses.CentroidTripletLoss(margin=margin,
-                            swap=swap,
-                            smooth_loss=smooth_loss,
-                            triplets_per_anchor=triplets_per_anchor)
-
-    
+    def __init__(self,temperature=0.5) -> None:
+        super(NTXentLoss, self).__init__()
+        self.loss = losses.NTXentLoss(temperature=temperature)

@@ -1,6 +1,5 @@
 import torch
-from torch import nn
-from torch.utils.data import Dataset,DataLoader
+from torch.utils.data import Dataset
 import os
 import random
 from PIL import Image
@@ -8,7 +7,6 @@ from torchvision import transforms
 from pathlib import Path
 import torchdatasets as td
 from tqdm import tqdm
-
 
 def _fast_scandir(dirname):
     subfolders= [f.path for f in os.scandir(dirname) if f.is_dir()]
@@ -36,9 +34,35 @@ class IndexRange(object):
     def inRange(self,index:int) -> bool:
         return index >= self.start and index < self.stop
          
+
+class AugmentingDataset(Dataset):
+    def __init__(self,sourceDataset:Dataset,augmentation:torch.nn.Sequential,transforms:torch.nn.Sequential,factor:int=4) -> None:
+        super(AugmentingDataset,self).__init__()
+        self.sourceDataset = sourceDataset
+        self.factor = factor
+        self.transforms = transforms
+        self.augmentation = augmentation
+        
+    def __len__(self) -> int:
+        return len(self.sourceDataset)*self.factor
+    
+    def __getitem__(self, idx):
+        if idx >= len(self):
+            return
+        
+        if idx/len(self.sourceDataset) < 1:
+            img,label = self.sourceDataset[idx]
+            return self.transforms(img),label
+        else:
+            index = idx%len(self.sourceDataset)
+            img,label = self.sourceDataset[index]
+            return self.transforms(self.augmentation(img)),label
+
+        
          
 class CachingDataset(Dataset):
     def __init__(self,dataset:Dataset,cache_in_ram:bool = False,cache_path:str = None) -> None:
+        super(CachingDataset,self).__init__()
         self.dataset = dataset
         if cache_path:
             self.dataset = td.datasets.WrapDataset(self.dataset).cache(td.cachers.Pickle(Path(cache_path)))
@@ -59,7 +83,7 @@ class ImageDataset(Dataset):
                  label:int = None,
                  random_seed:int = 42,
                  max_size:int=None) -> None:
-
+            super(ImageDataset,self).__init__()
             self.random_provider = random.Random(random_seed)
             self.dir = dir
             self.transform = transform
@@ -99,7 +123,7 @@ class MultiLabelDataset(Dataset):
                  max_size_per_class:int = None,
                  max_classes:int=None,
                  label_index:int=0) -> None:
-        
+        super(MultiLabelDataset,self).__init__()
         self.dir = dir
         self.labels = {}
         self.files = []
@@ -150,7 +174,7 @@ class MultiLabelDataset(Dataset):
 
 class ContrastiveDataset(Dataset):
     def __init__(self,multiLabelDataset:MultiLabelDataset,positives:int = 1,negatives:int = None,random_seed:int = 42) -> None:
-        
+        super(ContrastiveDataset,self).__init__()
         self.multiLabelDataset = multiLabelDataset
         self.random_provider = random.Random(random_seed)
         self.possible_indices = list(range(len(multiLabelDataset)))
@@ -205,5 +229,6 @@ class ContrastiveDataset(Dataset):
                 
 if __name__ == "__main__":
     dataset = MultiLabelDataset(os.path.abspath("./Carparts"),max_size_per_class=100)
-    contrastiveDataset = ContrastiveDataset(dataset)
-    print(len(contrastiveDataset))
+    print(len(dataset))
+    
+    
