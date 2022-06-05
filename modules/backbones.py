@@ -89,7 +89,22 @@ class Swin(EmbeddingNetwork):
         return self.model(x)
     
     
+class ViT(EmbeddingNetwork):
+    def __init__(self,pretrained:bool=True, freeze:bool=True, embedding_size: int = DEFAULT_EMBEDDING) -> None:
+        super().__init__(embedding_size)
+        
+        self.model = timm.create_model('vit_small_patch16_224_in21k', pretrained=pretrained)
+        if freeze:
+            for param in self.model.parameters():
+                param.requires_grad = False
+        self.model.head = self.build_fc(self.model.head.in_features)
+        self.pooling = torch.nn.AdaptiveAvgPool2d((224,224))
+        
+    def forward(self,x):
+        x = self.pooling(x)
+        return self.model(x)
+    
 if __name__ == "__main__":
-    # summary(Swin().to(DEVICE),(1, 3, 64, 64))
-    avail_pretrained_models = timm.list_models(pretrained=True)
-    pprint(avail_pretrained_models)
+    summary(ViT().to(DEVICE),(1, 3, 64, 64))
+    # avail_pretrained_models = timm.list_models(pretrained=True)
+    # pprint(avail_pretrained_models)
