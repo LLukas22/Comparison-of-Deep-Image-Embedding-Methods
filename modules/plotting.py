@@ -4,6 +4,7 @@ import numpy as np
 from openTSNE import TSNE
 from tqdm import tqdm
 import os
+import math
 
 def get_cmap(n, name='jet'):
     '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct 
@@ -24,14 +25,18 @@ def plot_tsne(embeddings:np.ndarray,labels:np.ndarray)->np.ndarray:
     return tsne_proj
     
     
-def plot_results(results:dict[str,tuple[np.ndarray,np.ndarray]],name:str,size:int=10)->None:
-    plt.figure(figsize=(size*len(results),size))
+def plot_results(results:dict[str,tuple[np.ndarray,np.ndarray]],name:str,size:int=10,max_columns:int=3)->None:
+    result_count = len(results)
+    rows = max(1,math.ceil(result_count/max_columns))
+    columns = min(max_columns,result_count)
+    plt.figure(figsize=(size*columns,size*rows))
+    
     for i,key in tqdm(enumerate(results),"Building T-SNE plots"):
-        plt.subplot(1,len(results),i+1)
+        plt.subplot(rows,columns,i+1)
         embeddings,labels = results[key]
         plot_tsne(embeddings,labels)
         plt.axis("off")
-        plt.title(key, fontsize=22)
+        plt.title(key, fontsize=25)
         
     plt.tight_layout()
     plt.savefig(f'plots/{name}.png', bbox_inches='tight')

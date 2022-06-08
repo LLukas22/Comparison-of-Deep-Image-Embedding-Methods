@@ -34,7 +34,7 @@
 \fancyhf{}
 \rhead{\IhrVorname\space\IhrNachname}
 \lhead{\IhreArbeit}
-\rfoot{\thepage\space / \pageref{LastPage}}
+\cfoot{\thepage}
 
 \begin{document}
 \begin{titlepage}
@@ -178,6 +178,8 @@ The algorithm is based on the idea of finding a low-dimensional representation o
 \newpage
 \chapter{Results and Discussion}
 
+\newpage
+
 \section{Backbone performance}
 In this experiment different backbones were used to train a siamese network for five epochs on a subset of 50 classes of the Tiny ImageNet dataset.
 No augmentations were used.
@@ -209,9 +211,11 @@ Small models like MobilNetV3 and EfficientNet seem to struggle to generate good 
 They would probably perform a lot better if the embedding tasks contains less classes.
 The ResNet50 baseline generates good embeddings and even outperforms the larger DenseNet169 backbone.
 
+\vspace{0.5cm}
+
 \begin{figure}[h]
 	\centering
-	\includegraphics[width=\textwidth]{../plots/backbones.png}
+	\includegraphics[width=0.9\textwidth]{../plots/backbones.png}
 	\caption{t-SNE visualization of backbones}
 \end{figure}
 
@@ -249,9 +253,11 @@ It is also the only loss function that expects the data to be labeled and is opt
 The other loss functions are more general and can also be used for unsupervised learning.
 We trained the network with labeled data, so its expected that the SupConLoss function performs better than the other loss functions.
 
+\vspace{0.5cm}
+
 \begin{figure}[h]
 	\centering
-	\includegraphics[width=\textwidth]{../plots/losses.png}
+	\includegraphics[width=0.9\textwidth]{../plots/losses.png}
 	\caption{t-SNE visualization of loss functions}
 \end{figure}
 
@@ -290,10 +296,12 @@ The performance of the network get better with higher embedding sizes.
 This effect seams to plateau at an embedding sizes of 1024.
 With bigger embedding sizes the parameters of the model increase exponentially and we need a lot more calculations to perform KNN-Searches on the generated embeddings.
 So its not possible to scale the embedding size indefinitely.
-\\
+
+\vspace{0.5cm}
+
 \begin{figure}[h]
 	\centering
-	\includegraphics[width=\textwidth]{../plots/embedding_size.png}
+	\includegraphics[width=0.9\textwidth]{../plots/embedding_size.png}
 	\caption{t-SNE visualization of embedding sizes}
 \end{figure}
 
