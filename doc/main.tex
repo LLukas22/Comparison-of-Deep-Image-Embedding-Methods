@@ -112,11 +112,26 @@ The dataset is used in the experiments to test zero-shot classification performa
 
 
 \chapter{Methods}
+\section{Image embedding networks}
+
+
+An image embedding network is a neural network that is trained to map images into a lower-dimensional space while retaining as much information about the original image as possible.
+This is done by learning to find relationships between the pixels in the image.
+The default architecture for this task is a backbone network that is trained to extract the features of an image (e.g. any CNN) followed by a multi-layer-perceptron (MLP) that compresses the features into a one dimensional vector.  
+
+\begin{figure}[h]
+    \centering
+	\includegraphics[height=4cm]{./images/embedding_network.png}
+	\caption{Default image embedding network}
+\end{figure}
+
+\newpage
+
 \section{Siamese networks}
 A Siamese neural network is a neural network that consists of two or more identical networks.\cite{signatureVerification}
-To generate deep image embeddings from images, these multiple networks are only used in the training step,
+To train a network to generate deep image embeddings from images, these multiple networks are commonly used in the training step,
 where the embeddings are calculated for each image and a loss function is used to minimize or maximize the distance between the embeddings,
-depending on the task. For later inference only on of the networks is used.
+depending on the task. For inference only on of the networks is used.
 
 \begin{figure}[h]
     \centering
@@ -133,36 +148,67 @@ This approach is a lot faster and uses less memory than using multiple networks.
 \\
 There is also the \textit{PyTorch Metric Learning}\cite{musgrave2020pytorch} library available for this task, that implements the same approach for generic pytorch models.
 
+\newpage
+
 \section{Backbones}
-The following Backbones were used to perform the feature extraction:
+For the feature extraction two different network architectures were used.
+CNN which use the principle of convolutions and transformers which use the principle of local and global attention to extract information from images. 
+The following Backbones were used:
 \begin{itemize}
-	\item ResNet 50 \cite{resnet}
- 	\item EfficientNetV2 \cite{EfficientNetV2}
-  	\item MobilNetV3 \cite{MobilNetV3}
-    \item DenseNet \cite{DenseNet}
-    \item Vit \cite{ViT}
-    \item Swin \cite{liu2021swin}
+	\item CNNs:\begin{itemize}
+		\item \textbf{ResNet 50} \cite{resnet}
+		\item \textbf{EfficientNetV2} \cite{EfficientNetV2}
+		\item \textbf{MobilNetV3} \cite{MobilNetV3}
+		\item \textbf{DenseNet} \cite{DenseNet}
+	\end{itemize}
+	\item Transformers:\begin{itemize}
+		\item \textbf{Vit} \cite{ViT}
+		\item \textbf{Swin} \cite{liu2021swin}
+    \end{itemize}
 \end{itemize}
 
 \section{Losses}
-The following contrastive loss functions were used to optimize the embedding vectors:
+The KNN-classification in the experiments assumes the embeddings for similar images to have a small distance to each other
+and a large distance to the embeddings of different images.
+To achieve this contrastive loss functions are used.
+The most basic contrastive loss function can be described as the distance between the embeddings of two images if they are positives and a margin (any number e.g. 4) minus the distance of the embeddings if the images are negatives.
+More advanced contrastive loss functions (e.g. SNRLos) build groups of embeddings by a given label and try to minimize the distance within each group and maximize the distance between the different groups of a batch.
+Another option is to use different distance metrics like cosine distance, euclidean distance, etc.
+The following loss functions were used:
 \begin{itemize}
-	\item ContrastiveLoss \cite{ContrastiveLoss}
- 	\item TripletLoss \cite{TripletLoss}
-  	\item SupConLoss \cite{SupConLoss}
-    \item SNRLoss \cite{SNRLoss}
-    \item NTXentLoss \cite{simclr}
+	\item \textbf{ContrastiveLoss} \cite{ContrastiveLoss}
+ 	\item \textbf{TripletLoss} \cite{TripletLoss}
+  	\item \textbf{SupConLoss} \cite{SupConLoss}
+    \item \textbf{SNRLoss} \cite{SNRLoss}
+    \item \textbf{NTXentLoss} \cite{simclr}
 \end{itemize}
-
-\newpage
 
 \section{Augmentation techniques}
-The following augmentation techniques were used to augment the training data:
+Image augmentation is the process of taking an image and applying random transformations to the image to produce a new image.
+The random transformations can be things like Flip, Crop, Rotate, and Warp.
+These transformations help to improve the ability of the model to generalize to new data by increasing the amount of data that the model sees.
+They are especially useful for small datasets where the model is not able to generalize to new data.
+The following augmentation techniques describe modules that automatically augment images:
 \begin{itemize}
-	\item AutoAugment \cite{AutoAugment}
- 	\item RandAugment \cite{RandAugment}
-  	\item TrivialAugmentWide \cite{TrivialAugmentWide}
+	\item \textbf{AutoAugment} \cite{AutoAugment}
+ 	\item \textbf{RandAugment} \cite{RandAugment}
+  	\item \textbf{TrivialAugmentWide} \cite{TrivialAugmentWide}
 \end{itemize}
+
+\section{KNN search}
+K-nearest-neighbor(KNN) search is a method of pattern recognition where an unknown pattern is classified by its similarity to known patterns.
+The KNN algorithm groups data points together based on their distance from a given point, called a query point.
+The query point is then assigned the class label of the most common class among its K neighbors.
+The KNN algorithm can be used to perform classification tasks on image embeddings.
+
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\textwidth]{./images/knn.png}
+	\caption{KNN search}
+\end{figure}
+
+\newpage
 
 \section{t-SNE}
 T-distributed stochastic neighbor embedding (t-SNE) is a statistic method for embedding visualization.
@@ -175,7 +221,6 @@ The algorithm is based on the idea of finding a low-dimensional representation o
 	\caption{t-SNE visualization of MNIST}
 \end{figure}
 
-\newpage
 \chapter{Results and Discussion}
 
 \newpage
@@ -185,7 +230,7 @@ In this experiment different backbones were used to train a siamese network for 
 No augmentations were used.
 Each network had a target embedding size of 256, used the TripletLoss metric and was initialized with pretrained ImageNet weights.
 
-\subsubsection*{Results}
+\subsubsection{Results}
 \begin{wraptable}{r}{5cm}
 	\begin{tabular}{ | c | c | }
 		\hline
@@ -211,9 +256,9 @@ Small models like MobilNetV3 and EfficientNet seem to struggle to generate good 
 They would probably perform a lot better if the embedding tasks contains less classes.
 The ResNet50 baseline generates good embeddings and even outperforms the larger DenseNet169 backbone.
 
-\vspace{0.5cm}
 
-\begin{figure}[h]
+
+\begin{figure}[hb]
 	\centering
 	\includegraphics[width=0.9\textwidth]{../plots/backbones.png}
 	\caption{t-SNE visualization of backbones}
@@ -229,7 +274,7 @@ As a backbone ResNet50 was used.
 The network had a target embedding size of 256 and was initialized with pretrained ImageNet weights.
 
 
-\subsubsection*{Results}
+\subsubsection{Results}
 \begin{wraptable}{r}{5cm}
 	\begin{tabular}{ | c | c | }
 		\hline
@@ -253,9 +298,8 @@ It is also the only loss function that expects the data to be labeled and is opt
 The other loss functions are more general and can also be used for unsupervised learning.
 We trained the network with labeled data, so its expected that the SupConLoss function performs better than the other loss functions.
 
-\vspace{0.5cm}
 
-\begin{figure}[h]
+\begin{figure}[hb]
 	\centering
 	\includegraphics[width=0.9\textwidth]{../plots/losses.png}
 	\caption{t-SNE visualization of loss functions}
@@ -271,7 +315,7 @@ As a backbone ResNet50 was used.
 The network used the SupConLoss metric and was initialized with pretrained ImageNet weights.
 
 
-\subsubsection*{Results}
+\subsubsection{Results}
 \begin{wraptable}{r}{5cm}
 	\begin{tabular}{ | c | c | }
 		\hline
@@ -297,19 +341,109 @@ This effect seams to plateau at an embedding sizes of 1024.
 With bigger embedding sizes the parameters of the model increase exponentially and we need a lot more calculations to perform KNN-Searches on the generated embeddings.
 So its not possible to scale the embedding size indefinitely.
 
-\vspace{0.5cm}
 
-\begin{figure}[h]
+\begin{figure}[hb]
 	\centering
 	\includegraphics[width=0.9\textwidth]{../plots/embedding_size.png}
 	\caption{t-SNE visualization of embedding sizes}
 \end{figure}
 
 
-\chapter{Conclusion}
+\newpage
+
+
+\section{Dependency on Dataset Size}
+
+In this experiment different dataset with N samples per class were used to train a siamese network for five epochs on a subset of 50 classes of the Tiny ImageNet dataset.
+For validation the same dataset as in the other experiments was used with 100 validation images for each of the classes.
+No augmentations were used.
+As a backbone ResNet50 was used.
+The network used the SupConLoss metric and was initialized with pretrained ImageNet weights.
+
+
+\subsubsection{Results}
+\begin{wraptable}{r}{5cm}
+	\begin{tabular}{ | c | c | }
+		\hline
+		Samples per Class &  F1-Score \\ 
+		\hline
+		10 &  0.223 \\ 
+		\hline
+		20 & 0.280 \\ 
+		\hline
+		30 & 0.369 \\ 
+		\hline
+		50 & 0.443 \\ 
+		\hline
+		80 & 0.507  \\ 
+		\hline
+		100 & 0.520 \\ 
+		\hline
+		200 & 0.632 \\ 
+		\hline
+		400 & 0.703 \\ 
+		\hline
+	\end{tabular}
+\end{wraptable} 
+
+The performance of the network is extremely dependent on the size of the train dataset.
+Every network which was trained under the sample size of 200 can't generate usable embeddings.
+When trying to finetune a embedding network with very small sample sizes per class image augmentation methods should be used. 
+
+\begin{figure}[hb]
+	\centering
+	\includegraphics[width=0.9\textwidth]{../plots/dataset_size.png}
+	\caption{t-SNE visualization of dataset sizes}
+\end{figure}
 
 \newpage
 
+\section{Efficiency of augmentations}
+
+In this experiment a dataset with 20 samples per class was build for 50 classes of the Tiny ImageNet dataset.
+Then this dataset was augmented with the RandAugment module to N*20 samples per class.
+For validation the same dataset as in the other experiments was used with 100 validation images for each of the classes.
+As a backbone ResNet50 was used.
+The network used the SupConLoss metric and was initialized with pretrained ImageNet weights.
+
+\subsubsection{Results}
+\begin{wraptable}{r}{5cm}
+	\begin{tabular}{ | c | c | }
+		\hline
+		Factor &  F1-Score \\ 
+		\hline
+		1x (Baseline) &  0.306  \\ 
+		\hline
+		2x & 0.352 \\ 
+		\hline
+		4x & 0.437 \\ 
+		\hline
+		8x & 0.518 \\ 
+		\hline
+		16x & 0.569  \\ 
+		\hline
+	\end{tabular}
+\end{wraptable} 
+
+Augmentations are a very effective way to boost the performance of the network and 
+to generalize the network,
+especially on a small dataset.
+Furthermore the performance seams to scale linearly with the number of augmentations.
+This is probably caused by the extremely small sample size per class.
+On bigger datasets the performance of the network is not affected that drastically by the number of augmentations.
+
+\begin{figure}[hb]
+	\centering
+	\includegraphics[width=0.9\textwidth]{../plots/augmentation_size.png}
+	\caption{t-SNE visualization of augmentation factors}
+\end{figure}
+
+\newpage
+
+\chapter{Conclusion}
+
+\newpage
+efficiency 
 \bibliography{refs}
 
 \end{document}
