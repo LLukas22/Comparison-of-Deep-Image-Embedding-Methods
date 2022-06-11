@@ -18,6 +18,15 @@
 %  top=35mm,
 %  }
 
+\newcommand{\splitlayout}[2]{
+	\begin{minipage}{0.6\textwidth}
+		#1
+	\end{minipage}
+	\hfill
+	\begin{minipage}{0.35\textwidth}
+		#2
+	\end{minipage}	
+}
 
 \setlength{\parindent}{0pt}
 \bibliographystyle{plain}
@@ -231,7 +240,14 @@ No augmentations were used.
 Each network had a target embedding size of 256, used the TripletLoss metric and was initialized with pretrained ImageNet weights.
 
 \subsubsection{Results}
-\begin{wraptable}{r}{5cm}
+
+\splitlayout{
+	Although ViT and Swin are a lot slower and need more memory than the other backbones they perform a lot better.
+	This property can also be observed in NLP tasks, where transformers originated from.
+	Small models like MobilNetV3 and EfficientNet seem to struggle to generate good embeddings for all classes.
+	They would probably perform a lot better if the embedding tasks contains less classes.
+	The ResNet50 baseline generates good embeddings and even outperforms the larger DenseNet169 backbone.
+}{
 	\begin{tabular}{ | c | c | }
 		\hline
 		Backbone & F1-Score \\ 
@@ -249,16 +265,9 @@ Each network had a target embedding size of 256, used the TripletLoss metric and
 		Swin & 0.934 \\ 
 		\hline
 	\end{tabular}
-\end{wraptable} 
-Although ViT and Swin are a lot slower and need more memory than the other backbones they perform a lot better.
-This property can also be observed in NLP tasks, where transformers originated from.
-Small models like MobilNetV3 and EfficientNet seem to struggle to generate good embeddings for all classes.
-They would probably perform a lot better if the embedding tasks contains less classes.
-The ResNet50 baseline generates good embeddings and even outperforms the larger DenseNet169 backbone.
+}
 
-
-
-\begin{figure}[hb]
+\begin{figure}[h]
 	\centering
 	\includegraphics[width=0.9\textwidth]{../plots/backbones.png}
 	\caption{t-SNE visualization of backbones}
@@ -275,7 +284,13 @@ The network had a target embedding size of 256 and was initialized with pretrain
 
 
 \subsubsection{Results}
-\begin{wraptable}{r}{5cm}
+
+\splitlayout{
+	The SupConLoss function is the best performing loss function.
+	It is also the only loss function that expects the data to be labeled and is optimized for supervised learning.
+	The other loss functions are more general and can also be used for unsupervised learning.
+	We trained the network with labeled data, so its expected that the SupConLoss function performs better than the other loss functions.
+}{
 	\begin{tabular}{ | c | c | }
 		\hline
 		Loss & F1-Score \\ 
@@ -291,13 +306,7 @@ The network had a target embedding size of 256 and was initialized with pretrain
 		NTXentLoss & 0.618 \\ 
 		\hline
 	\end{tabular}
-\end{wraptable} 
-
-The SupConLoss function is the best performing loss function.
-It is also the only loss function that expects the data to be labeled and is optimized for supervised learning.
-The other loss functions are more general and can also be used for unsupervised learning.
-We trained the network with labeled data, so its expected that the SupConLoss function performs better than the other loss functions.
-
+}
 
 \begin{figure}[hb]
 	\centering
@@ -316,7 +325,12 @@ The network used the SupConLoss metric and was initialized with pretrained Image
 
 
 \subsubsection{Results}
-\begin{wraptable}{r}{5cm}
+\splitlayout{
+	The performance of the network get better with higher embedding sizes.
+	This effect seams to plateau at an embedding sizes of 1024.
+	With bigger embedding sizes the parameters of the model increase exponentially and we need a lot more calculations to perform KNN-Searches on the generated embeddings.
+	So its not possible to scale the embedding size indefinitely.
+}{
 	\begin{tabular}{ | c | c | }
 		\hline
 		Embedding Size &  F1-Score \\ 
@@ -334,13 +348,7 @@ The network used the SupConLoss metric and was initialized with pretrained Image
 		2048 & 0.731 \\ 
 		\hline
 	\end{tabular}
-\end{wraptable} 
-
-The performance of the network get better with higher embedding sizes.
-This effect seams to plateau at an embedding sizes of 1024.
-With bigger embedding sizes the parameters of the model increase exponentially and we need a lot more calculations to perform KNN-Searches on the generated embeddings.
-So its not possible to scale the embedding size indefinitely.
-
+}
 
 \begin{figure}[hb]
 	\centering
@@ -362,7 +370,11 @@ The network used the SupConLoss metric and was initialized with pretrained Image
 
 
 \subsubsection{Results}
-\begin{wraptable}{r}{5cm}
+\splitlayout{
+	The performance of the network is extremely dependent on the size of the train dataset.
+	Every network which was trained under the sample size of 200 can't generate usable embeddings.
+	When trying to finetune a embedding network with very small sample sizes per class image augmentation methods should be used. 
+}{
 	\begin{tabular}{ | c | c | }
 		\hline
 		Samples per Class &  F1-Score \\ 
@@ -384,11 +396,7 @@ The network used the SupConLoss metric and was initialized with pretrained Image
 		400 & 0.703 \\ 
 		\hline
 	\end{tabular}
-\end{wraptable} 
-
-The performance of the network is extremely dependent on the size of the train dataset.
-Every network which was trained under the sample size of 200 can't generate usable embeddings.
-When trying to finetune a embedding network with very small sample sizes per class image augmentation methods should be used. 
+}
 
 \begin{figure}[hb]
 	\centering
@@ -407,7 +415,14 @@ As a backbone ResNet50 was used.
 The network used the SupConLoss metric and was initialized with pretrained ImageNet weights.
 
 \subsubsection{Results}
-\begin{wraptable}{r}{5cm}
+\splitlayout{
+	Augmentations are a very effective way to boost the performance of the network and 
+	to generalize the network,
+	especially on a small dataset.
+	Furthermore the performance seams to scale linearly with the number of augmentations.
+	This is probably caused by the extremely small sample size per class.
+	On bigger datasets the performance of the network is not affected that drastically by the number of augmentations.
+}{
 	\begin{tabular}{ | c | c | }
 		\hline
 		Factor &  F1-Score \\ 
@@ -423,14 +438,7 @@ The network used the SupConLoss metric and was initialized with pretrained Image
 		16x & 0.569  \\ 
 		\hline
 	\end{tabular}
-\end{wraptable} 
-
-Augmentations are a very effective way to boost the performance of the network and 
-to generalize the network,
-especially on a small dataset.
-Furthermore the performance seams to scale linearly with the number of augmentations.
-This is probably caused by the extremely small sample size per class.
-On bigger datasets the performance of the network is not affected that drastically by the number of augmentations.
+}
 
 \begin{figure}[hb]
 	\centering
@@ -440,10 +448,86 @@ On bigger datasets the performance of the network is not affected that drastical
 
 \newpage
 
-\chapter{Conclusion}
+\section{Testing different auto augmentation methods}
+In this experiment a dataset with 20 samples per class was build for 50 classes of the Tiny ImageNet dataset.
+Then this dataset was augmented with different auto augmentation modules by a factor of 4 to 80 samples per class.
+For validation the same dataset as in the other experiments was used with 100 validation images for each of the classes.
+As a backbone ResNet50 was used.
+The network used the SupConLoss metric and was initialized with pretrained ImageNet weights.
+
+\subsubsection{Results}
+\splitlayout{
+asdasd
+}{
+	\begin{tabular}{ | c | c | }
+		\hline
+		Method &  F1-Score \\ 
+		\hline
+		Baseline &  0.289  \\ 
+		\hline
+		AutoAugment & 0.392 \\ 
+		\hline
+		RandAugment & 0.436 \\ 
+		\hline
+		TrivialAugmentWide & 0.441  \\ 
+		\hline
+	\end{tabular}
+}
+
+\begin{figure}[hb]
+	\centering
+	\includegraphics[width=0.9\textwidth]{../plots/augmentation_methods.png}
+	\caption{t-SNE visualization of different augmentation methods}
+\end{figure}
 
 \newpage
+
+\section{Testing zero shot capabilities}
+In this experiment a SWIN model was finetuned on a four times augmented Tiny ImageNet dataset for 1 epoch.
+Then the embeddings for 100 image per class of the "Internal and External Parts of Cars"-Dataset where calculated.
+Half of these embeddings were used for the KNN search the other half was used to validate the model.
+
+\subsubsection{Results}
+\splitlayout{
+asdasd
+}{
+	\begin{tabular}{ | c | }
+		\hline
+		F1-Score \\ 
+		\hline
+		0.865  \\ 
+		\hline
+	\end{tabular}
+}
+
+\begin{figure}[hb]
+	\centering
+	\includegraphics[width=0.4\textwidth]{../plots/zero_shot_embeddings.png}
+	\caption{t-SNE visualization of zero shot embeddings}
+\end{figure}
+
+\newpage
+
+\section{Combining the above observations}
+
+In this experiment we try to train a model on 4 classes of the "Internal and External Parts of Cars"-dataset with 20 samples per class.
+Then we validate the model against all 8 classes of the dataset with 230 validation images each.
+As a backbone SWIN was used with a embedding size of 1024.
+SupConLoss was used as a loss metric and the model was initialized with pretrained ImageNet weights.
+The dataset was augmented by a factor of 16 with the RandAugment module.
+
+
+\begin{figure}[hb]
+	\centering
+	\includegraphics[width=0.9\textwidth]{../plots/final.png}
+	\caption{t-SNE visualization of trained and zero shot embeddings}
+\end{figure}
+
+
+\chapter{Conclusion}
+
 efficiency 
+
 \bibliography{refs}
 
 \end{document}

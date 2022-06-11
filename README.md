@@ -107,7 +107,7 @@ Results:
 ![alt text](plots/augmentation_methods.png)
 
 
-| Methode  |  F1-Score|
+| Method  |  F1-Score|
 |---|---|
 |Baseline |  0.289 |
 |AutoAugment  | 0.392  | 
