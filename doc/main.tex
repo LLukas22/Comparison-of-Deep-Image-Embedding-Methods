@@ -181,8 +181,9 @@ The KNN-classification in the experiments assumes the embeddings for similar ima
 and a large distance to the embeddings of different images.
 To achieve this contrastive loss functions are used.
 The most basic contrastive loss function can be described as the distance between the embeddings of two images if they are positives and a margin (any number e.g. 4) minus the distance of the embeddings if the images are negatives.
-More advanced contrastive loss functions (e.g. SNRLos) build groups of embeddings by a given label and try to minimize the distance within each group and maximize the distance between the different groups of a batch.
+More advanced contrastive loss functions (e.g. SupConLoss) build groups of embeddings by a given label and try to minimize the distance within each group and maximize the distance between the different groups of a batch.
 Another option is to use different distance metrics like cosine distance, euclidean distance, etc.
+\\
 The following loss functions were used:
 \begin{itemize}
 	\item \textbf{ContrastiveLoss} \cite{ContrastiveLoss}
@@ -201,7 +202,7 @@ The following augmentation techniques describe modules that automatically augmen
 \begin{itemize}
 	\item \textbf{AutoAugment} \cite{AutoAugment}
  	\item \textbf{RandAugment} \cite{RandAugment}
-  	\item \textbf{TrivialAugmentWide} \cite{TrivialAugmentWide}
+  	\item \textbf{TrivialAugment} \cite{TrivialAugmentWide}
 \end{itemize}
 
 \section{KNN search}
@@ -457,7 +458,10 @@ The network used the SupConLoss metric and was initialized with pretrained Image
 
 \subsubsection{Results}
 \splitlayout{
-asdasd
+	RandAugment and TrivialAugment perform very similarly to each other.
+	AutoAugment performs a bit worse than the other methodes.
+	This is probably caused by the used imagenet augmentation profile, that is not suited for the Tiny ImageNet dataset.
+	The other methodes dont depend on a profile that is finetuned on a dataset and can easily be applied to any dataset. 
 }{
 	\begin{tabular}{ | c | c | }
 		\hline
@@ -469,7 +473,7 @@ asdasd
 		\hline
 		RandAugment & 0.436 \\ 
 		\hline
-		TrivialAugmentWide & 0.441  \\ 
+		TrivialAugment & 0.441  \\ 
 		\hline
 	\end{tabular}
 }
@@ -489,7 +493,10 @@ Half of these embeddings were used for the KNN search the other half was used to
 
 \subsubsection{Results}
 \splitlayout{
-asdasd
+The zero shot capabilities of embedding networks are very good.
+Especially when a transformer based backbone is used.
+This allows ambedding networks to be trained on a very broad dataset like ImageNet-22K and then be used in a detection task in a different domain without the need to finetune the network on this new task.
+
 }{
 	\begin{tabular}{ | c | }
 		\hline
@@ -516,6 +523,21 @@ As a backbone SWIN was used with a embedding size of 1024.
 SupConLoss was used as a loss metric and the model was initialized with pretrained ImageNet weights.
 The dataset was augmented by a factor of 16 with the RandAugment module.
 
+\subsubsection{Results}
+\splitlayout{
+	By combining the observations of the above experiments we can create a model on a small dataset that can perform very well in a classification task.
+	Furthermore the resulting model can create descriptive embeddings for unknown classes that reside in the same domain as the trained classes.
+}{
+	\begin{tabular}{ | c | c | }
+		\hline
+		Mode & F1-Score \\ 
+		\hline
+		Trained & 0.995  \\ 
+		\hline
+		Zero-Shot & 0.975  \\ 
+		\hline
+	\end{tabular}
+}
 
 \begin{figure}[hb]
 	\centering
@@ -526,7 +548,16 @@ The dataset was augmented by a factor of 16 with the RandAugment module.
 
 \chapter{Conclusion}
 
-efficiency 
+Embedding networks can be a very powerful tool for image classification tasks.
+They are especially useful in circumstances where other softmax based models begin to struggle.
+Their ability to be trained on datasets with very few samples per class is very useful in tasks where its hard or costly to create bigger datasets.
+The possibility to perform good zero shot detections is also very useful, this trait also allows to add new classes to a already trained model without the need to retrain it.
+This opens the possibility to create a generic embedding model, that is trained on a huge dataset and then is used in a detection task without finetuning the model for this new task.
+\\
+Another interesting use case is unsupervised learning of embeddings with the use of augmentation strategies.
+This allows the use of unlabeled datasets but the performance of the resulting model will be worse than if the model was trained on the same labeled dataset.
+
+
 
 \bibliography{refs}
 

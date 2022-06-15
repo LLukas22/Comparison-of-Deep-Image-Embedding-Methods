@@ -1,5 +1,8 @@
-# Comparision-of-Deep-Image-Embedding-Methodes
+# Comparison-of-Deep-Image-Embedding-Methods
 This Repo compares different deep image embedding methods with the goal to achieve good general embeddings for images given a small amount of training data.
+
+
+This Repo was created for an assignment in a deep vision course at the [OTH-Amberg-Weiden](https://www.oth-aw.de/). Therefore a [report](doc/main.pdf) is included.
 
 ## Datasets
 Following datasets were used:
