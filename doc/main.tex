@@ -10,7 +10,7 @@
 \usepackage[T1]{fontenc}
 \usepackage{subfig}
 \usepackage{wrapfig,lipsum,booktabs}
-
+\usepackage{amsmath}
 \usepackage{geometry}
 % \geometry{
 %  a4paper,
@@ -92,7 +92,7 @@ This makes it possible to use a classifier such as a support vector machine (SVM
 
 \subsubsection{Tiny Imagenet}
 The  \textit{Tiny ImageNet} dataset is a subset of the ImageNet dataset.
-It contains only only colored images with 64x64 pixels per image and was created as an alternative to the CIFAR \cite{cifar} datasets.
+It contains only colored images with 64x64 pixels per image and was created as an alternative to the CIFAR \cite{cifar} datasets.
 The dataset contains 200 different classes with a total of 500 images per class.\cite{tinyimagenet}
 A subset of 50 classes is used in the experiments to test different backbones, loss functions and embedding sizes.
 
@@ -108,7 +108,7 @@ A subset of 50 classes is used in the experiments to test different backbones, l
 The \textit{Internal and External Parts of Cars} dataset \cite{internalexternal} is a subset of the CompCars \cite{carparts} dataset.
 It contains images of different internal and external car parts.
 In total there are 27.618 images from 8 different classes.
-The dataset is used in the experiments to test zero-shot classification performance and a subset of 20 images per class is used to measure the performance on very small datasets.
+The dataset is used in experiments to test zero-shot classification performance and a subset of 20 images per class is used to measure the performance on very small datasets.
 
 \begin{figure}[h]
     \centering
@@ -140,7 +140,7 @@ The default architecture for this task is a backbone network that is trained to 
 A Siamese neural network is a neural network that consists of two or more identical networks.\cite{signatureVerification}
 To train a network to generate deep image embeddings from images, these multiple networks are commonly used in the training step,
 where the embeddings are calculated for each image and a loss function is used to minimize or maximize the distance between the embeddings,
-depending on the task. For inference only on of the networks is used.
+depending on the task. For inference only one of the networks is used.
 
 \begin{figure}[h]
     \centering
@@ -153,15 +153,15 @@ depending on the task. For inference only on of the networks is used.
 Frameworks like SimCLR\cite{simclr} don't use multiple networks for training, but instead use a single network that processes every image in a mini batch.
 The resulting embeddings are then sorted by labels and grouped into positives and negatives.
 Then a loss function is used to minimize distance between the positives and maximize the distance between the negatives.
-This approach is a lot faster and uses less memory than using multiple networks.
+This approach is a lot faster and consumes less memory than using multiple networks.
 \\
 There is also the \textit{PyTorch Metric Learning}\cite{musgrave2020pytorch} library available for this task, that implements the same approach for generic pytorch models.
 
 \newpage
 
 \section{Backbones}
-For the feature extraction two different network architectures were used.
-CNN which use the principle of convolutions and transformers which use the principle of local and global attention to extract information from images. 
+For feature extraction two different network architectures were used.
+CNNs which use the principle of convolutions and transformers which use the principle of local and global attention to extract information from images. 
 The following Backbones were used:
 \begin{itemize}
 	\item CNNs:\begin{itemize}
@@ -177,13 +177,25 @@ The following Backbones were used:
 \end{itemize}
 
 \section{Losses}
-The KNN-classification in the experiments assumes the embeddings for similar images to have a small distance to each other
-and a large distance to the embeddings of different images.
+The KNN-classification algorithm used in the experiments assumes the embeddings for similar images to be near to each other
+and embeddings of different images to have a large distance between them.
 To achieve this contrastive loss functions are used.
-The most basic contrastive loss function can be described as the distance between the embeddings of two images if they are positives and a margin (any number e.g. 4) minus the distance of the embeddings if the images are negatives.
-More advanced contrastive loss functions (e.g. SupConLoss) build groups of embeddings by a given label and try to minimize the distance within each group and maximize the distance between the different groups of a batch.
-Another option is to use different distance metrics like cosine distance, euclidean distance, etc.
-\\
+The most basic contrastive loss function can be described as follows \cite{ContrastiveLoss}:
+
+\begin{equation*}
+L = \begin{cases} 
+		dist(emb_1,emb_2),& \text{if positives}\\
+		max(0,margin-dist(emb_1,emb_2)),& \text{if negatives}
+	\end{cases}
+\end{equation*}
+
+Where the distance between the embeddings is calculated using the Euclidean distance and the margin is a choosable hyperparameter.
+This contrastive loss function doesn't need labels and can be used for unsupervised learning.
+When used for unsupervised learning all augmentation of a given image are treated as positives and all other images in a batch as negatives.
+There are also contrastive loss functions designed for supervised learning like the \textbf{SupConLoss}\cite{SupConLoss}.
+These loss functions require labels to be provided for each image.
+They work by grouping all images in a batch by their labels and then calculate the distance within each group and between all different groups.
+\newpage
 The following loss functions were used:
 \begin{itemize}
 	\item \textbf{ContrastiveLoss} \cite{ContrastiveLoss}
@@ -205,6 +217,8 @@ The following augmentation techniques describe modules that automatically augmen
   	\item \textbf{TrivialAugment} \cite{TrivialAugmentWide}
 \end{itemize}
 
+\newpage
+
 \section{KNN search}
 K-nearest-neighbor(KNN) search is a method of pattern recognition where an unknown pattern is classified by its similarity to known patterns.
 The KNN algorithm groups data points together based on their distance from a given point, called a query point.
@@ -214,11 +228,11 @@ The KNN algorithm can be used to perform classification tasks on image embedding
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.5\textwidth]{./images/knn.png}
+    \includegraphics[width=0.3\textwidth]{./images/knn.png}
 	\caption{KNN search}
 \end{figure}
 
-\newpage
+
 
 \section{t-SNE}
 T-distributed stochastic neighbor embedding (t-SNE) is a statistic method for embedding visualization.
@@ -227,7 +241,7 @@ The algorithm is based on the idea of finding a low-dimensional representation o
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.5\textwidth]{./images/tsne-mnist.png}
+    \includegraphics[width=0.3\textwidth]{./images/tsne-mnist.png}
 	\caption{t-SNE visualization of MNIST}
 \end{figure}
 
@@ -243,7 +257,7 @@ Each network had a target embedding size of 256, used the TripletLoss metric and
 \subsubsection{Results}
 
 \splitlayout{
-	Although ViT and Swin are a lot slower and need more memory than the other backbones they perform a lot better.
+	Although ViT and Swin are slower and need more memory than the other backbones they perform a lot better.
 	This property can also be observed in NLP tasks, where transformers originated from.
 	Small models like MobilNetV3 and EfficientNet seem to struggle to generate good embeddings for all classes.
 	They would probably perform a lot better if the embedding tasks contains less classes.
@@ -419,10 +433,10 @@ The network used the SupConLoss metric and was initialized with pretrained Image
 \splitlayout{
 	Augmentations are a very effective way to boost the performance of the network and 
 	to generalize the network,
-	especially on a small dataset.
+	especially for small datasets.
 	Furthermore the performance seams to scale linearly with the number of augmentations.
 	This is probably caused by the extremely small sample size per class.
-	On bigger datasets the performance of the network is not affected that drastically by the number of augmentations.
+	On bigger datasets the performance of the network is not affected significantly by the number of augmentations.
 }{
 	\begin{tabular}{ | c | c | }
 		\hline
@@ -492,12 +506,14 @@ Then the embeddings for 100 image per class of the "Internal and External Parts 
 Half of these embeddings were used for the KNN search the other half was used to validate the model.
 
 \subsubsection{Results}
-\splitlayout{
-The zero shot capabilities of embedding networks are very good.
-Especially when a transformer based backbone is used.
-This allows ambedding networks to be trained on a very broad dataset like ImageNet-22K and then be used in a detection task in a different domain without the need to finetune the network on this new task.
-
-}{
+\begin{minipage}{0.8\textwidth}
+	The zero shot capabilities of embedding networks are very good.
+	Especially when a transformer based backbone is used.
+	This allows embedding networks to be trained on a very broad dataset like ImageNet-22K\cite{imagenet} and then be used in a detection task in a different domain without the need to finetune the network on this new task.
+	
+\end{minipage}
+\hfill
+\begin{minipage}{0.15\textwidth}
 	\begin{tabular}{ | c | }
 		\hline
 		F1-Score \\ 
@@ -505,7 +521,7 @@ This allows ambedding networks to be trained on a very broad dataset like ImageN
 		0.865  \\ 
 		\hline
 	\end{tabular}
-}
+\end{minipage}	
 
 \begin{figure}[hb]
 	\centering
